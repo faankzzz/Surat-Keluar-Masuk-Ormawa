@@ -23,97 +23,188 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>Form Pendaftaran</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daftar Akun - SIMAS ORMAWA</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body {
+        * {
+            box-sizing: border-box;
             margin: 0;
-            font-family: 'Segoe UI', sans-serif;
-            background: linear-gradient(135deg, #2980b9, #6dd5fa, #ffffff);
-            height: 100vh;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f1f5f9;
+            min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
         }
 
+        .register-wrapper {
+            width: 100%;
+            max-width: 400px;
+            padding: 0 20px;
+        }
+
         .form-container {
-            background: white;
-            padding: 30px 40px;
+            background: #ffffff;
+            padding: 36px 32px;
             border-radius: 12px;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.2);
-            width: 350px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -2px rgba(0,0,0,0.05);
+            border: 1px solid #e2e8f0;
         }
 
         .form-container h2 {
             text-align: center;
-            margin-bottom: 25px;
-            color: #2980b9;
+            margin-bottom: 8px;
+            color: #1e293b;
+            font-size: 1.4em;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        .form-subtitle {
+            text-align: center;
+            color: #64748b;
+            font-size: 13px;
+            margin-bottom: 28px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 500;
+            font-size: 14px;
+            color: #1e293b;
         }
 
         .form-container input[type="text"],
         .form-container input[type="email"],
         .form-container input[type="password"] {
             width: 100%;
-            padding: 12px 15px;
-            margin: 10px 0;
-            border: 1px solid #ccc;
+            padding: 10px 14px;
+            border: 1px solid #e2e8f0;
             border-radius: 8px;
-            transition: border 0.3s;
+            font-size: 14px;
+            font-family: inherit;
+            color: #1e293b;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
         }
 
         .form-container input:focus {
-            border-color: #2980b9;
+            border-color: #3b82f6;
             outline: none;
+            box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
+        }
+
+        .form-container input::placeholder {
+            color: #94a3b8;
         }
 
         .form-container button {
             width: 100%;
-            padding: 12px;
-            background: #2980b9;
+            padding: 11px;
+            background: #1e293b;
             color: white;
             border: none;
             border-radius: 8px;
-            font-size: 16px;
+            font-size: 14px;
+            font-weight: 600;
+            font-family: inherit;
             cursor: pointer;
-            transition: background 0.3s;
+            transition: background 0.15s ease;
+            margin-top: 4px;
         }
 
         .form-container button:hover {
-            background: #2573a6;
+            background: #334155;
+        }
+
+        .login-link {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 13px;
+            color: #64748b;
+        }
+
+        .login-link a {
+            color: #3b82f6;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .login-link a:hover {
+            text-decoration: underline;
         }
 
         .message {
-            margin: 20px auto;
-            width: fit-content;
-            padding: 10px 15px;
-            border-radius: 6px;
+            margin: 0 auto 16px;
+            padding: 12px 16px;
+            border-radius: 8px;
             text-align: center;
+            font-size: 14px;
         }
 
         .message.success {
-            background-color: #d4edda;
-            color: #155724;
+            background-color: #dcfce7;
+            color: #15803d;
+            border: 1px solid #bbf7d0;
+        }
+
+        .message.success a {
+            color: #15803d;
+            font-weight: 600;
         }
 
         .message.error {
-            background-color: #f8d7da;
-            color: #721c24;
+            background-color: #fee2e2;
+            color: #b91c1c;
+            border: 1px solid #fecaca;
         }
 
-        a {
-            color: #155724;
-            text-decoration: underline;
+        .footer-text {
+            text-align: center;
+            margin-top: 24px;
+            font-size: 12px;
+            color: #94a3b8;
         }
     </style>
 </head>
 <body>
-    <div class="form-container">
-        <h2>Daftar Akun</h2>
-        <form method="POST">
-            <input type="text" name="nama" placeholder="Nama lengkap" required>
-            <input type="email" name="gmail" placeholder="Alamat Gmail" required>
-            <input type="password" name="password" placeholder="Password" required>
-            <button type="submit">Daftar</button>
-        </form>
+    <div class="register-wrapper">
+        <div class="form-container">
+            <h2>Buat Akun Baru</h2>
+            <p class="form-subtitle">Daftar untuk mengakses SIMAS ORMAWA</p>
+            <form method="POST">
+                <div class="form-group">
+                    <label>Nama Lengkap</label>
+                    <input type="text" name="nama" placeholder="Masukkan nama lengkap" required>
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" name="gmail" placeholder="nama@email.com" required>
+                </div>
+                <div class="form-group">
+                    <label>Kata Sandi</label>
+                    <input type="password" name="password" placeholder="Buat kata sandi" required>
+                </div>
+                <button type="submit">Daftar</button>
+            </form>
+            <div class="login-link">
+                Sudah punya akun? <a href="login.php">Masuk di sini</a>
+            </div>
+        </div>
+        <div class="footer-text">
+            &copy; 2026 SIMAS ORMAWA. All rights reserved.
+        </div>
     </div>
 </body>
 </html>

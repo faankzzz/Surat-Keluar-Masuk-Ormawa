@@ -1,12 +1,13 @@
 <?php
 include 'configg.php';
 
-if (isset($_GET['no_agenda'])) {
-    $no_agenda = $_GET['no_agenda'];
-    $conn->query("DELETE FROM surat_keluar WHERE no_agenda = '$no_agenda'");
+$nomor = $_GET['nomor'] ?? $_GET['no_agenda'] ?? null;
+if ($nomor) {
+    $nomor = $conn->real_escape_string($nomor);
+    $conn->query("DELETE FROM surat_keluar WHERE nomor = '$nomor' OR no_agenda = '$nomor'");
     header("Location: data_suratkeluar.php");
     exit;
 } else {
-    echo "No agenda tidak ditemukan.";
+    echo "Nomor surat tidak ditemukan.";
 }
 ?>

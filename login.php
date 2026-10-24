@@ -34,8 +34,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 <html lang="id">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - SIMAS ORMAWA</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * {
             box-sizing: border-box;
@@ -44,128 +47,166 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f1f5f9;
             height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
         }
 
-        .login-container {
+        .login-wrapper {
             width: 100%;
-            max-width: 420px;
-            background: rgba(255, 255, 255, 0.95);
-            padding: 40px;
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            max-width: 400px;
+            padding: 0 20px;
+        }
+
+        .login-container {
+            background: #ffffff;
+            padding: 36px 32px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -2px rgba(0,0,0,0.05);
+            border: 1px solid #e2e8f0;
         }
 
         .logo {
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 28px;
         }
 
-        .logo i {
-            font-size: 60px;
-            color: #667eea;
+        .logo-icon {
+            width: 56px;
+            height: 56px;
+            background: #1e293b;
+            border-radius: 12px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            margin-bottom: 16px;
         }
 
         .logo h1 {
-            color: #333;
+            color: #1e293b;
             font-weight: 700;
+            font-size: 1.4em;
+            letter-spacing: -0.02em;
         }
 
         .logo p {
-            color: #666;
-            font-size: 14px;
+            color: #64748b;
+            font-size: 13px;
+            margin-top: 4px;
         }
 
         .form-group {
-            margin-bottom: 20px;
+            margin-bottom: 16px;
         }
 
         .form-group label {
-            color: #333;
-            margin-bottom: 8px;
+            color: #1e293b;
+            margin-bottom: 6px;
             display: block;
             font-weight: 500;
+            font-size: 14px;
         }
 
         .form-group input {
             width: 100%;
-            padding: 12px;
-            border: 2px solid #e1e5e9;
-            border-radius: 10px;
-            font-size: 16px;
+            padding: 10px 14px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
             background: #fff;
+            color: #1e293b;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
         }
 
         .form-group input:focus {
-            border-color: #667eea;
+            border-color: #3b82f6;
             outline: none;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
+        }
+
+        .form-group input::placeholder {
+            color: #94a3b8;
         }
 
         button {
             width: 100%;
-            padding: 12px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 11px;
+            background: #1e293b;
             color: white;
             border: none;
-            border-radius: 10px;
-            font-size: 16px;
+            border-radius: 8px;
+            font-size: 14px;
             font-weight: 600;
+            font-family: inherit;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: background 0.15s ease;
+            margin-top: 4px;
         }
 
         button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+            background: #334155;
         }
 
         .register-link {
             text-align: center;
             margin-top: 20px;
-            font-size: 14px;
+            font-size: 13px;
+            color: #64748b;
         }
 
         .register-link a {
-            color: #667eea;
+            color: #3b82f6;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .register-link a:hover {
             text-decoration: underline;
+        }
+
+        .footer-text {
+            text-align: center;
+            margin-top: 24px;
+            font-size: 12px;
+            color: #94a3b8;
         }
     </style>
 </head>
 <body>
-    <div class="login-container">
-        <form method="POST" class="login-form">
-            <div class="logo">
-                <i class="fas fa-envelope-open-text"></i>
-                <h1>SIMAS ORMAWA</h1>
-                <p>Sistem Manajemen Surat Organisasi Mahasiswa</p>
-            </div>
+    <div class="login-wrapper">
+        <div class="login-container">
+            <form method="POST" class="login-form">
+                <div class="logo">
+                    <div class="logo-icon">📋</div>
+                    <h1>SIMAS ORMAWA</h1>
+                    <p>Sistem Manajemen Surat Organisasi Mahasiswa</p>
+                </div>
 
-            <div class="form-group">
-                <label for="gmail">Gmail</label>
-                <input type="email" id="gmail" name="gmail" required placeholder="Alamat Gmail">
-            </div>
+                <div class="form-group">
+                    <label for="gmail">Email</label>
+                    <input type="email" id="gmail" name="gmail" required placeholder="nama@email.com">
+                </div>
 
-            <div class="form-group">
-                <label for="password">Kata Sandi</label>
-                <input type="password" id="password" name="password" required placeholder="Kata Sandi">
-            </div>
+                <div class="form-group">
+                    <label for="password">Kata Sandi</label>
+                    <input type="password" id="password" name="password" required placeholder="Masukkan kata sandi">
+                </div>
 
-            <button type="submit">
-                <i class="fas fa-sign-in-alt"></i> Masuk
-            </button>
+                <button type="submit">Masuk</button>
 
-            <div class="register-link">
-                Belum punya akun? <a href="register.php">Daftar di sini</a>
-            </div>
-        </form>
+                <div class="register-link">
+                    Belum punya akun? <a href="register.php">Daftar di sini</a>
+                </div>
+            </form>
+        </div>
+        <div class="footer-text">
+            &copy; 2026 SIMAS ORMAWA. All rights reserved.
+        </div>
     </div>
 </body>
 </html>

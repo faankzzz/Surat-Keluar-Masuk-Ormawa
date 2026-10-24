@@ -1,347 +1,714 @@
 <?php
 include 'configg.php';
 
-$instansi = isset($_GET['instansi']) ? $conn->real_escape_string($_GET['instansi']) : '';
-$perihal  = isset($_GET['perihal']) ? $conn->real_escape_string($_GET['perihal']) : '';
+$q = isset($_GET['q']) ? trim($conn->real_escape_string($_GET['q'])) : '';
+$instansi = isset($_GET['instansi']) ? trim($conn->real_escape_string($_GET['instansi'])) : '';
+$perihal  = isset($_GET['perihal']) ? trim($conn->real_escape_string($_GET['perihal'])) : '';
 
-if ($instansi && $perihal) {
-    $result = $conn->query("SELECT * FROM surat_masuk WHERE nama_instansi LIKE '%$instansi%' AND perihal LIKE '%$perihal%' ORDER BY CAST(nomor AS UNSIGNED) ASC");
-} elseif ($instansi) {
-    $result = $conn->query("SELECT * FROM surat_masuk WHERE nama_instansi LIKE '%$instansi%' ORDER BY CAST(nomor AS UNSIGNED) ASC");
-} else {
-    $result = $conn->query("SELECT * FROM surat_masuk ORDER BY CAST(nomor AS UNSIGNED) ASC");
+$where = [];
+if ($q !== '') {
+    $where[] = "(nomor LIKE '%$q%' OR nomor_surat LIKE '%$q%' OR perihal LIKE '%$q%' OR instansi LIKE '%$q%' OR nama_pengirim LIKE '%$q%')";
+}
+if ($instansi !== '') {
+    $where[] = "instansi LIKE '%$instansi%'";
+}
+if ($perihal !== '') {
+    $where[] = "perihal LIKE '%$perihal%'";
 }
 
+$whereClause = count($where) > 0 ? "WHERE " . implode(" AND ", $where) : "";
+$sql = "SELECT * FROM surat_masuk $whereClause ORDER BY CAST(nomor AS UNSIGNED) ASC";
+$result = $conn->query($sql);
 
 $suratMasuk = [];
-while ($row = $result->fetch_assoc()) {
-    $suratMasuk[] = $row;
+if ($result) {
+    while ($row = $result->fetch_assoc()) {
+        $suratMasuk[] = $row;
+    }
 }
 
 $total = count($suratMasuk);
 $current = isset($_GET['index']) ? (int)$_GET['index'] : 0;
 if ($current < 0) $current = 0;
-if ($current >= $total) $current = $total - 1;
+if ($total > 0 && $current >= $total) $current = $total - 1;
 
-if ($total === 0) {
-    echo "<div class='main-content'>";
-    echo "<div class='message' style='background-color:#ffe0e0;'>Tidak ada data ditemukan untuk instansi '<strong>" . htmlspecialchars($instansi) . "</strong>' dan perihal '<strong>" . htmlspecialchars($perihal) . "</strong>'</div>";
-    echo "<a href='data_suratmasuk.php' class='btn'>🔄 Kembali</a>";
-    echo "</div>";
-    exit;
+$data = $total > 0 ? $suratMasuk[$current] : null;
+
+// Cek apakah ada surat keluar yang juga cocok dengan kata kunci
+$keluarCount = 0;
+if ($q !== '') {
+    $checkKeluar = $conn->query("SELECT COUNT(*) as total FROM surat_keluar WHERE nomor LIKE '%$q%' OR nomor_surat LIKE '%$q%' OR perihal LIKE '%$q%' OR ditujukan LIKE '%$q%' OR instansi LIKE '%$q%' OR nama_penerima LIKE '%$q%'");
+    if ($checkKeluar && $rowK = $checkKeluar->fetch_assoc()) {
+        $keluarCount = (int)$rowK['total'];
+    }
 }
-
-$data = $suratMasuk[$current];
 ?>
-
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>Data Surat Masuk</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Surat Masuk - SIMAS ORMAWA</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        * {margin: 0; padding: 0; box-sizing: border-box;}
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(-45deg, #1e88e5, #42a5f5, #64b5f6, #bbdefb);
-            background-size: 400% 400%;
-            animation: gradientShift 15s ease infinite;
-            color: #333;
+        .content-wrapper {
+            max-width: 740px;
+            margin: 0 auto;
+            width: 100%;
         }
-        @keyframes gradientShift {
-            0% {background-position: 0% 50%;}
-            50% {background-position: 100% 50%;}
-            100% {background-position: 0% 50%;}
+
+        .page-header {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow-sm);
+            text-align: center;
         }
-        .wrapper {
+
+        .header-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: #eff6ff;
+            color: var(--accent);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            margin-bottom: 12px;
+        }
+
+        .page-header h2 {
+            font-size: 1.35em;
+            font-weight: 700;
+            color: var(--text-primary);
+            letter-spacing: -0.02em;
+            margin: 0 0 6px 0;
+        }
+
+        .page-header p {
+            color: var(--text-secondary);
+            font-size: 13px;
+            margin: 0;
+        }
+
+        /* Search Box in Header */
+        .search-container {
+            margin-top: 18px;
             display: flex;
-            min-height: 100vh;
-        }
-        .sidebar {
-            background-color: #1a237e;
-            padding: 20px;
-            width: 240px;
-            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+            justify-content: center;
+            gap: 8px;
+            flex-wrap: wrap;
         }
 
-        .sidebar h3 {
-            margin-top: 0;
-            font-size: 1.2rem;
-            text-align: center;
-            color: #ffc107;
+        .search-input-group {
+            display: flex;
+            align-items: center;
+            background: #fff;
+            border: 1px solid var(--card-border);
+            border-radius: var(--radius);
+            padding: 2px 4px 2px 14px;
+            width: 100%;
+            max-width: 480px;
+            box-shadow: var(--shadow-sm);
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
         }
 
-        .sidebar ul {
-            list-style: none;
-            padding: 0;
-            margin-top: 36px;
+        .search-input-group:focus-within {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
         }
 
-        .sidebar ul li {
-            margin-bottom: 5px;
+        .search-input-group input {
+            border: none;
+            outline: none;
+            width: 100%;
+            font-size: 13px;
+            font-family: inherit;
+            color: var(--text-primary);
+            background: transparent;
+            padding: 8px 4px;
         }
 
-        .sidebar-menu a {
-            color: #fff;
+        .btn-search-submit {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: inherit;
+            transition: background 0.15s ease;
+            white-space: nowrap;
+        }
+
+        .btn-search-submit:hover {
+            background: var(--accent-hover);
+        }
+
+        .header-actions {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-top: 14px;
+            flex-wrap: wrap;
+        }
+
+        .btn-header {
+            padding: 8px 16px;
+            border-radius: var(--radius);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
             text-decoration: none;
-            font-family: "Tahoma";
-            font-size:16px;
-            display: block;
-            padding: 15px 20px;
-            border-radius: 2px;
-            transition: background 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-family: inherit;
+            border: 1px solid transparent;
+            transition: all 0.15s ease;
         }
 
-        .sidebar ul li a.active,
-        .sidebar ul li a:hover {
-            background-color:rgba(255, 255, 255, 0.8);
+        .btn-header-secondary {
+            background: #f8fafc;
+            color: var(--text-secondary);
+            border-color: var(--card-border);
         }
 
-        .sidebar .logo {
-            text-align: center;
+        .btn-header-secondary:hover {
+            background: #fff;
+            color: var(--accent);
+            border-color: var(--accent);
+        }
+
+        /* Search Badge Alert */
+        .search-info-bar {
+            margin-top: 14px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .search-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            color: var(--accent);
+        }
+
+        .other-search-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: #fef3c7;
+            border: 1px solid #fde68a;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            color: #92400e;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.15s ease;
+        }
+
+        .other-search-link:hover {
+            background: #fde68a;
+        }
+
+        /* Centered Data Card */
+        .data-card {
+            background: var(--card-bg);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--card-border);
+            overflow: hidden;
             margin-bottom: 20px;
         }
 
-        .sidebar .logo img {
-            width: 120px;
-            border-radius: 50%;
-            border: 3px solid #fff;
-        }
-        
-        .main-content {
-            flex-grow: 1;
-            padding: 30px;
-            margin-left: 280px; /* Tambahkan ini */
-            background-color: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            backdrop-filter: blur(8px);
-            overflow-y: auto;
-            align-items: center;
-                }
-        
-        .section-header {
-            display: flex;
-            justify-content: space-between; /* Judul di kiri, tombol di kanan */
-            align-items: center;
-            background-color: #8590e5;
-            color: #0d47a1;
-            padding: 10px 20px;
-            border-radius: 8px;
-            margin-bottom: 25px;
-        }
-
-        .section-header h2 {
-            margin: 0;
-            font-size: 24px;
-        }
-
-        .action-buttons {
-            display: flex;
-            gap: 10px; /* jarak antar tombol */
-        }
-
-        .btn {
-            background-color: #1e88e5; /* default warna biru */
-            color: white;
-            border: none;
-            padding: 10px 16px;
-            font-size: 14px;
-            cursor: pointer;
-            border-radius: 6px;
-            text-decoration: none;
-        }
-        .btn:hover {
-            background-color: #1565c0; 
-        }
-        .btn-nav {
-            background-color: #1565c0;
-        }
-        .btn-nav:hover {
-            background-color: #0d47a1;
-        }
-        .btn-gray {
-            background-color: #6c757d;
-        }
-        .btn-gray:hover {
-            background-color: #5a6268;
-        }
-        
-        .table-container {
-            background-color: #8590e5 !important;
-            padding: 25px;
-            border-radius: 12px;
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
-            max-width: 800px;
+        .data-table {
             width: 100%;
-            margin: 0 auto;
-        }
-        table {
-            width: 100%;
-            background-color:  rgba(255, 255, 255, 0.2);
             border-collapse: collapse;
         }
-        table td {
-            border: 1px solid #ddd;
-            color : #0d47a1;
-            padding: 12px;
+
+        .data-table tr {
+            border-bottom: 1px solid var(--card-border);
         }
-        table td:first-child {
-            background-color: #e3f2fd;
-            font-weight: bold;
-            width: 35%;
+
+        .data-table tr:last-child {
+            border-bottom: none;
         }
+
+        .data-table td {
+            padding: 14px 20px;
+            font-size: 14px;
+            vertical-align: middle;
+        }
+
+        /* Centered Data Column & Centered Label */
+        .data-table .data-label {
+            background: #f8fafc;
+            font-weight: 600;
+            width: 38%;
+            color: var(--text-secondary);
+            font-size: 13px;
+            text-align: center;
+            border-right: 1px solid var(--card-border);
+        }
+
+        .data-table .data-value {
+            color: var(--text-primary);
+            text-align: center;
+            font-weight: 500;
+            word-break: break-word;
+        }
+
+        .file-link-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 8px 16px;
+            background: #eff6ff;
+            color: var(--accent);
+            border-radius: var(--radius);
+            font-size: 13px;
+            font-weight: 600;
+            text-decoration: none;
+            border: 1px solid #bfdbfe;
+            transition: all 0.15s ease;
+        }
+
+        .file-link-btn:hover {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+
+        /* Centered Navigation Bar */
         .navigation {
             display: flex;
-            justify-content: space-between;
-            margin-top: 20px;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 14px;
+            flex-wrap: wrap;
         }
-        .message {
-            background-color: #d4edda;
-            padding: 12px 15px;
-            border: 1px solid #c3e6cb;
-            color: #155724;
-            border-radius: 6px;
+
+        .btn-nav {
+            background: var(--accent);
+            color: white;
+            padding: 9px 16px;
+            border-radius: var(--radius);
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            transition: background 0.15s ease;
+        }
+
+        .btn-nav:hover {
+            background: var(--accent-hover);
+        }
+
+        .btn-nav.disabled {
+            background: #cbd5e1;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        .nav-actions {
+            display: flex;
+            gap: 6px;
+        }
+
+        .btn-action-item {
+            background: #f8fafc;
+            color: var(--text-primary);
+            padding: 9px 14px;
+            border-radius: var(--radius);
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 500;
+            border: 1px solid var(--card-border);
+            transition: all 0.15s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .btn-action-item:hover {
+            background: #fff;
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .btn-action-danger:hover {
+            background: #fee2e2;
+            border-color: #fca5a5;
+            color: #dc2626;
+        }
+
+        .record-info {
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 13px;
+            font-weight: 500;
+            padding: 6px 0 16px;
+        }
+
+        .empty-state {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: var(--radius-lg);
+            padding: 48px 24px;
+            text-align: center;
+            color: var(--text-secondary);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .empty-icon {
+            font-size: 40px;
+            margin-bottom: 12px;
+        }
+
+        .empty-state p {
             font-size: 14px;
+            margin-bottom: 16px;
         }
 
         /* Modal Styles */
         .modal {
             display: none;
             position: fixed;
-            z-index: 999;
-            left: 0; top: 0;
-            width: 100%; height: 100%;
-            background: rgba(0,0,0,0.5);
-            justify-content: center;
-            align-items: center;
-        }
-        .modal-content {
-            background: white;
-            padding: 30px;
-            border-radius: 10px;
-            width: 90%;
-            max-width: 400px;
-            text-align: center;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-        }
-        .modal input {
+            z-index: 2000;
+            left: 0;
+            top: 0;
             width: 100%;
-            padding: 10px;
-            margin: 15px 0;
-            border: 1px solid #ccc;
-            border-radius: 6px;
+            height: 100%;
+            background-color: rgba(15, 23, 42, 0.45);
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(2px);
         }
-        .close {
-            float: right;
-            font-size: 24px;
-            font-weight: bold;
+
+        .modal-content {
+            background: var(--card-bg);
+            padding: 28px;
+            border-radius: var(--radius-lg);
+            width: 90%;
+            max-width: 440px;
+            box-shadow: var(--shadow-lg);
+            border: 1px solid var(--card-border);
+            text-align: center;
+        }
+
+        .modal-content h3 {
+            color: var(--text-primary);
+            font-size: 1.15em;
+            margin-bottom: 6px;
+            font-weight: 600;
+        }
+
+        .modal-content p {
+            color: var(--text-secondary);
+            font-size: 13px;
+            margin-bottom: 16px;
+        }
+
+        .modal-input {
+            width: 100%;
+            padding: 11px 14px;
+            border: 1px solid var(--card-border);
+            border-radius: var(--radius);
+            font-size: 14px;
+            font-family: inherit;
+            margin-bottom: 14px;
+            text-align: center;
+        }
+
+        .modal-input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
+        }
+
+        .modal-target-select {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin-bottom: 18px;
+            font-size: 13px;
+        }
+
+        .modal-target-select label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
             cursor: pointer;
+            color: var(--text-primary);
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .modal-actions button {
+            flex: 1;
+            padding: 10px;
+            border-radius: var(--radius);
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            font-family: inherit;
+        }
+
+        .btn-modal-primary {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-modal-primary:hover {
+            background: var(--accent-hover);
+        }
+
+        .btn-modal-cancel {
+            background: #f1f5f9;
+            color: var(--text-secondary);
+        }
+
+        .btn-modal-cancel:hover {
+            background: #e2e8f0;
         }
     </style>
 </head>
 <body>
 
-<div class="wrapper">
-    <div class="sidebar">
-        <?php include 'sidebar.php'; ?>
-    </div>
+<?php include 'sidebar.php'; ?>
 
-    <div class="main-content">
-    <div class="section-header">
-        <h2>Data Surat Masuk</h2>
-        <div class="action-buttons">
-            <button class="btn" onclick="openInstansiModal()">🔍 Cari Surat Masuk</button>
-            <a href="data_suratmasuk.php" class="btn btn-secondary">🔄 Reset</a>
-        </div>
-    </div>
+<main class="main-content">
+    <div class="content-wrapper">
+        <div class="page-header">
+            <div class="header-icon">📁</div>
+            <h2>Data Surat Masuk</h2>
+            <p>Arsip dan detail data surat masuk organisasi</p>
 
-        <br><br>
-
-        <!-- Tabel Data -->
-        <div class="table-container">
-            <table>
-                <tr><td>Nomor</td><td><?= htmlspecialchars($data['nomor']); ?></td></tr>
-                <tr><td>Nomor Surat</td><td><?= htmlspecialchars($data['nomor_surat']); ?></td></tr>
-                <tr><td>Perihal</td><td><?= htmlspecialchars($data['perihal']); ?></td></tr>
-                <tr><td>Nama Pengirim</td><td><?= htmlspecialchars($data['nama_pengirim']); ?></td></tr>
-                <tr><td>Instansi</td><td><?= htmlspecialchars($data['instansi']); ?></td></tr>
-                <tr><td>Tanggal Surat Masuk</td><td><?= date('d/m/Y', strtotime($data['tanggal_surat'])); ?></td></tr>
-                    <td>File Surat</td>
-                    <td>
-                        <?php
-                        $fileSurat = $data['file_surat'];
-                        $ext = strtolower(pathinfo($fileSurat, PATHINFO_EXTENSION));
-                        $link = "uploads/" . $fileSurat;
-                        if ($ext === 'pdf') {
-                            echo "<a href='$link' target='_blank'>📄 Lihat atau Unduh PDF</a>";
-                        } else {
-                            echo "<a href='$link' target='_blank' style='color:#0d47a1;'>🖼️ Lihat Gambar</a>";
-                        }
-                        ?>
-                    </td>
-                </tr>
-            </table>
-
-            <div class="navigation">
-                <a href="?index=<?= max(0, $current - 1) . ($instansi ? '&instansi=' . urlencode($instansi) : '') . ($perihal ? '&perihal=' . urlencode($perihal) : '') ?>" class="btn btn-nav">◀ Sebelumnya</a>
-                <div>
-                    <a href="form_suratmasuk.php" class="btn btn-gray">➕ Tambah Data</a>
-                    <a href="edit_suratmasuk.php?nomor=<?= urlencode($data['nomor']); ?>" class="btn btn-gray">✏️ Edit</a>
-                    <a href="hapus_suratmasuk.php?nomor=<?= urlencode($data['nomor']); ?>" onclick="return confirm('Yakin ingin menghapus surat ini?');" class="btn btn-gray">🗑️ Hapus</a>
+            <!-- Search Form Langsung Sekaligus -->
+            <form action="data_suratmasuk.php" method="GET" class="search-container">
+                <div class="search-input-group">
+                    <span>🔍</span>
+                    <input type="text" name="q" value="<?= htmlspecialchars($q); ?>" placeholder="Cari langsung semua: nomor, perihal, instansi, pengirim..." />
+                    <button type="submit" class="btn-search-submit">Cari</button>
                 </div>
-                <a href="?index=<?= min($total - 1, $current + 1) . ($instansi ? '&instansi=' . urlencode($instansi) : '') . ($perihal ? '&perihal=' . urlencode($perihal) : '') ?>" class="btn btn-nav">▶ Berikutnya</a>
+            </form>
+
+            <div class="header-actions">
+                <button class="btn-header btn-header-secondary" onclick="openSearchModal()">
+                    <span>🔎</span> Pencarian Lengkap
+                </button>
+                <?php if ($q || $instansi || $perihal): ?>
+                    <a href="data_suratmasuk.php" class="btn-header btn-header-secondary">
+                        <span>🔄</span> Reset Pencarian
+                    </a>
+                <?php endif; ?>
+                <a href="form_suratmasuk.php" class="btn-header btn-header-secondary">
+                    <span>➕</span> Tambah Surat
+                </a>
             </div>
+
+            <?php if ($q || $instansi || $perihal): ?>
+                <div class="search-info-bar">
+                    <div class="search-badge">
+                        <span>🔍 Hasil pencarian:</span>
+                        <strong>"<?= htmlspecialchars($q ?: ($instansi . ' ' . $perihal)); ?>"</strong>
+                        <span>(<?= $total; ?> surat ditemukan)</span>
+                    </div>
+
+                    <?php if ($keluarCount > 0): ?>
+                        <a href="data_suratkeluar.php?q=<?= urlencode($q); ?>" class="other-search-link">
+                            📤 Ditemukan juga <strong><?= $keluarCount; ?> surat keluar</strong> dengan kata kunci ini →
+                        </a>
+                    <?php endif; ?>
+                </div>
+            <?php endif; ?>
         </div>
+
+        <?php if ($total === 0): ?>
+            <div class="empty-state">
+                <div class="empty-icon">📭</div>
+                <h3>Tidak Ada Data Surat Masuk</h3>
+                <p>
+                    <?= ($q || $instansi || $perihal) 
+                        ? 'Tidak ditemukan data surat masuk yang cocok dengan kata kunci pencarian.' 
+                        : 'Belum ada data surat masuk yang tersimpan dalam sistem.' ?>
+                </p>
+                <div style="display:flex; justify-content:center; gap:10px; flex-wrap:wrap;">
+                    <?php if ($q || $instansi || $perihal): ?>
+                        <a href="data_suratmasuk.php" class="btn-header btn-header-primary">🔄 Tampilkan Semua Surat</a>
+                        <?php if ($keluarCount > 0): ?>
+                            <a href="data_suratkeluar.php?q=<?= urlencode($q); ?>" class="btn-header btn-header-secondary">
+                                📤 Cari di Surat Keluar (<?= $keluarCount; ?> hasil)
+                            </a>
+                        <?php endif; ?>
+                    <?php endif; ?>
+                    <a href="form_suratmasuk.php" class="btn-header btn-header-primary">➕ Tambah Surat Sekarang</a>
+                </div>
+            </div>
+        <?php else: ?>
+            <div class="data-card">
+                <table class="data-table">
+                    <tr>
+                        <td class="data-label">Nomor</td>
+                        <td class="data-value"><?= htmlspecialchars($data['nomor']); ?></td>
+                    </tr>
+                    <tr>
+                        <td class="data-label">Nomor Surat</td>
+                        <td class="data-value"><?= htmlspecialchars($data['nomor_surat']); ?></td>
+                    </tr>
+                    <tr>
+                        <td class="data-label">Perihal</td>
+                        <td class="data-value"><?= htmlspecialchars($data['perihal']); ?></td>
+                    </tr>
+                    <tr>
+                        <td class="data-label">Nama Pengirim</td>
+                        <td class="data-value"><?= htmlspecialchars($data['nama_pengirim']); ?></td>
+                    </tr>
+                    <tr>
+                        <td class="data-label">Instansi</td>
+                        <td class="data-value"><?= htmlspecialchars($data['instansi']); ?></td>
+                    </tr>
+                    <tr>
+                        <td class="data-label">Tanggal Surat</td>
+                        <td class="data-value"><?= date('d/m/Y', strtotime($data['tanggal_surat'])); ?></td>
+                    </tr>
+                    <tr>
+                        <td class="data-label">Berkas Lampiran</td>
+                        <td class="data-value">
+                            <?php
+                            $fileSurat = $data['file_surat'];
+                            $ext = strtolower(pathinfo($fileSurat, PATHINFO_EXTENSION));
+                            $link = "uploads/" . $fileSurat;
+                            if ($ext === 'pdf') {
+                                echo "<a href='$link' target='_blank' class='file-link-btn'>📄 Lihat / Unduh PDF</a>";
+                            } else {
+                                echo "<a href='$link' target='_blank' class='file-link-btn'>🖼️ Lihat Berkas Gambar</a>";
+                            }
+                            ?>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- Centered Navigation -->
+            <div class="navigation">
+                <?php 
+                $prevIndex = max(0, $current - 1);
+                $nextIndex = min($total - 1, $current + 1);
+                $querySuffix = $q ? '&q=' . urlencode($q) : (($instansi ? '&instansi=' . urlencode($instansi) : '') . ($perihal ? '&perihal=' . urlencode($perihal) : ''));
+                ?>
+                <a href="?index=<?= $prevIndex . $querySuffix ?>" class="btn-nav <?= $current <= 0 ? 'disabled' : '' ?>">
+                    ← Sebelumnya
+                </a>
+
+                <div class="nav-actions">
+                    <a href="form_suratmasuk.php" class="btn-action-item">
+                        <span>➕</span> Tambah
+                    </a>
+                    <a href="edit_suratmasuk.php?nomor=<?= urlencode($data['nomor']); ?>" class="btn-action-item">
+                        <span>✏️</span> Edit
+                    </a>
+                    <a href="hapus_suratmasuk.php?nomor=<?= urlencode($data['nomor']); ?>" onclick="return confirm('Apakah Anda yakin ingin menghapus surat nomor <?= htmlspecialchars($data['nomor']); ?> ini?');" class="btn-action-item btn-action-danger">
+                        <span>🗑️</span> Hapus
+                    </a>
+                </div>
+
+                <a href="?index=<?= $nextIndex . $querySuffix ?>" class="btn-nav <?= $current >= ($total - 1) ? 'disabled' : '' ?>">
+                    Berikutnya →
+                </a>
+            </div>
+
+            <div class="record-info">
+                Data ke-<?= $current + 1 ?> dari <?= $total ?> surat
+            </div>
+        <?php endif; ?>
     </div>
-</div>
+</main>
 
-<!-- Modal Pencarian -->
-<div id="instansiModal" class="modal">
+<!-- Modal Pencarian All-in-One (Bisa Cari Surat Masuk atau Keluar) -->
+<div id="searchModal" class="modal">
   <div class="modal-content">
-    <span class="close" onclick="closeInstansiModal()">&times;</span>
-    <h3>Cari Nama Instansi/Perusahaan</h3>
-    <input type="text" id="instansiInput" placeholder="Masukkan nama instansi...">
-    <button class="btn" onclick="submitInstansi()">Lanjut</button>
+    <h3>Pencarian Surat</h3>
+    <p>Cari langsung sekaligus berdasarkan nomor, nomor surat, perihal, instansi, atau nama</p>
+    
+    <input type="text" id="modalSearchInput" class="modal-input" placeholder="Masukkan kata kunci pencarian..." autofocus />
+    
+    <div class="modal-target-select">
+        <label>
+            <input type="radio" name="searchTarget" value="masuk" checked />
+            <span>Surat Masuk</span>
+        </label>
+        <label>
+            <input type="radio" name="searchTarget" value="keluar" />
+            <span>Surat Keluar</span>
+        </label>
+    </div>
+
+    <div class="modal-actions">
+        <button type="button" class="btn-modal-cancel" onclick="closeSearchModal()">Batal</button>
+        <button type="button" class="btn-modal-primary" onclick="submitSearchModal()">Cari Sekarang</button>
+    </div>
   </div>
 </div>
 
-<div id="perihalModal" class="modal">
-  <div class="modal-content">
-    <span class="close" onclick="closePerihalModal()">&times;</span>
-    <h3>Cari Perihal Surat</h3>
-    <input type="text" id="perihalInput" placeholder="Masukkan perihal...">
-    <button class="btn" onclick="submitPerihal()">Tampilkan Data</button>
-  </div>
-</div>
-
-<!-- Script Modal -->
 <script>
-let instansi = '';
+function openSearchModal() {
+    document.getElementById('searchModal').style.display = 'flex';
+    document.getElementById('modalSearchInput').focus();
+}
 
-function openInstansiModal() {
-    document.getElementById('instansiModal').style.display = 'flex';
+function closeSearchModal() {
+    document.getElementById('searchModal').style.display = 'none';
 }
-function closeInstansiModal() {
-    document.getElementById('instansiModal').style.display = 'none';
-}
-function submitInstansi() {
-    instansi = document.getElementById('instansiInput').value.trim();
-    if (!instansi) {
-        alert('Isi nama instansi terlebih dahulu!');
+
+function submitSearchModal() {
+    const val = document.getElementById('modalSearchInput').value.trim();
+    if (!val) {
+        alert('Silakan ketikkan kata kunci pencarian terlebih dahulu!');
         return;
     }
-    closeInstansiModal();
-    document.getElementById('perihalModal').style.display = 'flex';
-}
-function closePerihalModal() {
-    document.getElementById('perihalModal').style.display = 'none';
-}
-function submitPerihal() {
-    const perihal = document.getElementById('perihalInput').value.trim();
-    if (!perihal) {
-        alert('Isi perihal surat terlebih dahulu!');
-        return;
+    const target = document.querySelector('input[name="searchTarget"]:checked').value;
+    if (target === 'keluar') {
+        window.location.href = `data_suratkeluar.php?q=${encodeURIComponent(val)}`;
+    } else {
+        window.location.href = `data_suratmasuk.php?q=${encodeURIComponent(val)}`;
     }
-    window.location.href = `data_suratmasuk.php?instansi=${encodeURIComponent(instansi)}&perihal=${encodeURIComponent(perihal)}`;
+}
+
+document.getElementById('modalSearchInput').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        submitSearchModal();
+    }
+});
+
+window.onclick = function(event) {
+    const m = document.getElementById('searchModal');
+    if (event.target === m) closeSearchModal();
 }
 </script>
 

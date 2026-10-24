@@ -1,258 +1,311 @@
+<?php
+include 'configg.php';
+
+$success = null;
+$error = null;
+$uploadedFileName = null;
+$uploadedFilePath = null;
+
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    $nomor = $conn->real_escape_string($_POST['nomor'] ?? '');
+    $nama_pengirim = $conn->real_escape_string($_POST['nama_pengirim'] ?? '');
+    $instansi = $conn->real_escape_string($_POST['instansi'] ?? '');
+    $nomor_surat = $conn->real_escape_string($_POST['nomor_surat'] ?? '');
+    $tanggal_surat = $conn->real_escape_string($_POST['tanggal_surat'] ?? '');
+    $perihal = $conn->real_escape_string($_POST['perihal'] ?? '');
+
+    $uploadDir = "uploads/";
+    if (!is_dir($uploadDir)) {
+        mkdir($uploadDir, 0777, true);
+    }
+
+    $rawFileName = basename($_FILES["file_surat"]["name"] ?? '');
+    if (!empty($rawFileName)) {
+        $fileName = time() . "_" . $rawFileName;
+        $targetFile = $uploadDir . $fileName;
+
+        // Cek duplikasi nomor
+        $cek = mysqli_query($conn, "SELECT * FROM surat_masuk WHERE nomor = '$nomor'");
+        if (mysqli_num_rows($cek) > 0) {
+            $error = "Nomor '$nomor' sudah ada. Silakan gunakan nomor yang berbeda.";
+        } else {
+            if (move_uploaded_file($_FILES["file_surat"]["tmp_name"], $targetFile)) {
+                $sql = "INSERT INTO surat_masuk (
+                    nomor, nama_pengirim, instansi, nomor_surat, tanggal_surat,
+                    perihal, file_surat
+                ) VALUES (
+                    '$nomor', '$nama_pengirim', '$instansi', '$nomor_surat', '$tanggal_surat',
+                    '$perihal', '$fileName'
+                )";
+
+                if (mysqli_query($conn, $sql)) {
+                    $success = "Data surat masuk berhasil disimpan ke sistem!";
+                    $uploadedFileName = $fileName;
+                    $uploadedFilePath = $targetFile;
+                } else {
+                    $error = "Gagal menyimpan ke database: " . mysqli_error($conn);
+                }
+            } else {
+                $error = "Gagal mengupload berkas surat.";
+            }
+        }
+    } else {
+        $error = "Silakan pilih berkas surat untuk diupload.";
+    }
+}
+?>
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8" />
-    <title>Form Surat Masuk</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Form Surat Masuk - SIMAS ORMAWA</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            color: #333;
-            background: linear-gradient(-45deg, #1e88e5, #42a5f5, #64b5f6, #bbdefb);
-            background-size: 400% 400%;
-            animation: gradientShift 15s ease infinite;
-        }
-
-        @keyframes gradientShift {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-        }
-
-        .wrapper {
-            display: flex;
-            min-height: 100vh;
-        }
-
-        .sidebar {
-            background-color: #1a237e;
-            padding: 20px;
-            width: 240px;
-            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
-        }
-
-        .sidebar h3 {
-            margin-top: 0;
-            font-size: 1.2rem;
-            text-align: center;
-            color: #ffc107;
-        }
-
-        .sidebar ul {
-            list-style: none;
-            padding: 0;
-            margin-top: 36px;
-        }
-
-        .sidebar ul li {
-            margin-bottom: 5px;
-        }
-
-        .sidebar-menu a {
-            color: #fff;
-            text-decoration: none;
-            font-family: "Tahoma";
-            font-size:16px;
-            display: block;
-            padding: 15px 20px;
-            border-radius: 2px;
-            transition: background 0.3s;
-        }
-
-        .sidebar ul li a.active,
-        .sidebar ul li a:hover {
-            background-color:rgba(255, 255, 255, 0.8);
-        }
-
-        .sidebar .logo {
-            text-align: center;
-            margin-bottom: 20px;
-        }
-
-        .sidebar .logo img {
-            width: 120px;
-            border-radius: 50%;
-            border: 3px solid #fff;
-        }
-
-        .main-content {
-            flex-grow: 1;
-            padding: 30px;
-            margin-left: 280px; /* Tambahkan ini */
-            background-color: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            backdrop-filter: blur(8px);
-            overflow-y: auto;
-                }
-
-        h2 {
-            margin-bottom: 25px;
-            font-size: 24px;
-            display: flex;
-            justify-content: center;
-            color: #0d47a1;
-            background-color: #8590e5;
-            padding: 10px 20px;
-            border-radius: 8px;
-        }
-        
-        .form-container {
-                display: flex;
-                justify-content: center;
-            }
-
-            form {
-                background-color: #8590e5;
-                padding: 25px;
-                border-radius: 12px;
-                max-width: 700px;
-                width: 100%;
-                box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
-            }
-
-        label {
-            display: block;
-            color:#ffffff;
-            margin-top: 15px;
-            font-weight: bold;
-            font-size: 14px;
-        }
-
-        input, button {
+        .content-wrapper {
+            max-width: 660px;
+            margin: 0 auto;
             width: 100%;
-            background-color:  rgba(255, 255, 255, 0.2);
-            padding: 10px;
-            margin-top: 6px;
-            border: 1px solid #ccc;
-            border-radius: 6px;
+        }
+
+        .page-header {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow-sm);
+            text-align: center;
+        }
+
+        .header-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: #eff6ff;
+            color: var(--accent);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            margin-bottom: 12px;
+        }
+
+        .page-header h2 {
+            font-size: 1.35em;
+            font-weight: 700;
+            color: var(--text-primary);
+            letter-spacing: -0.02em;
+            margin: 0 0 6px 0;
+        }
+
+        .page-header p {
+            color: var(--text-secondary);
+            font-size: 13px;
+            margin: 0;
+        }
+
+        .form-card {
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--card-border);
+        }
+
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        .form-group label {
+            display: block;
+            color: var(--text-primary);
+            margin-bottom: 6px;
+            font-weight: 500;
+            font-size: 13px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid var(--card-border);
+            border-radius: var(--radius);
             font-size: 14px;
+            font-family: inherit;
+            color: var(--text-primary);
+            background: #fff;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
         }
 
-        input:focus {
-            border-color: #1a73e8;
+        .form-group input:focus {
+            border-color: var(--accent);
             outline: none;
-            box-shadow: 0 0 5px rgba(230, 241, 255, 0.3);
+            box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
         }
 
-        button {
-            background-color: #1e88e5;
+        .form-group input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .form-group input[type="file"] {
+            padding: 9px 12px;
+            background: #f8fafc;
+            cursor: pointer;
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 12px;
+            background: var(--accent);
             color: white;
-            font-weight: bold;
             border: none;
-            margin-top: 20px;
-            transition: background-color 0.3s;
+            border-radius: var(--radius);
+            font-size: 14px;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            transition: background 0.15s ease;
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
 
-        button:hover {
-            background-color: #1565c0;
+        .btn-submit:hover {
+            background: var(--accent-hover);
         }
 
         .message {
-            background-color: #d4edda;
-            padding: 12px 15px;
+            padding: 14px 18px;
             margin-bottom: 20px;
-            border: 1px solid #c3e6cb;
-            color: #155724;
-            border-radius: 6px;
+            border-radius: var(--radius);
             font-size: 14px;
+            border: 1px solid #bbf7d0;
+            background: #dcfce7;
+            color: #15803d;
+            text-align: center;
+        }
+
+        .message a {
+            color: #15803d;
+            font-weight: 600;
+            text-decoration: underline;
         }
 
         .message.error {
-            background-color: #f8d7da;
-            border-color: #f5c6cb;
-            color: #721c24;
+            background: #fee2e2;
+            border-color: #fecaca;
+            color: #b91c1c;
+        }
+
+        .form-actions-bar {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-top: 18px;
+        }
+
+        .btn-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 14px;
+            border-radius: var(--radius);
+            font-size: 13px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            background: #f8fafc;
+            border: 1px solid var(--card-border);
+            transition: all 0.15s ease;
+        }
+
+        .btn-link:hover {
+            color: var(--accent);
+            border-color: var(--accent);
+            background: #fff;
         }
     </style>
 </head>
 <body>
 
-<div class="wrapper">
-    <div class="sidebar">
-        <?php include 'sidebar.php'; ?>
-    </div>
+<?php include 'sidebar.php'; ?>
 
-    <div class="main-content">
-        <h2>FORM INPUT SURAT MASUK</h2>
+<main class="main-content">
+    <div class="content-wrapper">
+        <div class="page-header">
+            <div class="header-icon">📥</div>
+            <h2>Form Input Surat Masuk</h2>
+            <p>Tambahkan arsip dan catatan surat masuk ke dalam sistem</p>
+        </div>
 
-        <?php
-        include 'configg.php';
+        <?php if ($success): ?>
+            <div class="message">
+                <?= htmlspecialchars($success); ?>
+                <br>
+                <small>Berkas: <a href="<?= htmlspecialchars($uploadedFilePath); ?>" target="_blank"><?= htmlspecialchars($uploadedFileName); ?></a></small>
+                <div class="form-actions-bar">
+                    <a href="data_suratmasuk.php" class="btn-link">📁 Lihat Daftar Surat</a>
+                    <a href="form_suratmasuk.php" class="btn-link">➕ Input Lagi</a>
+                </div>
+            </div>
+        <?php elseif ($error): ?>
+            <div class="message error">
+                <?= htmlspecialchars($error); ?>
+            </div>
+        <?php endif; ?>
 
-        if ($_SERVER["REQUEST_METHOD"] == "POST") {
-            $nomor = $_POST['nomor'];
-            $nama_pengirim = $_POST['nama_pengirim'];
-            $instansi = $_POST['instansi'];
-            $nomor_surat = $_POST['nomor_surat'];
-            $tanggal_surat = $_POST['tanggal_surat'];
-            $perihal = $_POST['perihal'];
+        <div class="form-card">
+            <form action="" method="post" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label for="nomor">Nomor</label>
+                    <input type="text" id="nomor" name="nomor" placeholder="Contoh: 01" required />
+                </div>
 
-            $uploadDir = "uploads/";
-            if (!is_dir($uploadDir)) {
-                mkdir($uploadDir, 0777, true);
-            }
+                <div class="form-group">
+                    <label for="nomor_surat">Nomor Surat</label>
+                    <input type="text" id="nomor_surat" name="nomor_surat" placeholder="Contoh: 11/HMJ-AB/SEMINAR/U/V/2025" required />
+                </div>
 
-            $fileName = basename($_FILES["file_surat"]["name"]);
-            $targetFile = $uploadDir . $fileName;
+                <div class="form-group">
+                    <label for="perihal">Perihal</label>
+                    <input type="text" id="perihal" name="perihal" placeholder="Contoh: Undangan Kegiatan Mahasiswa" required />
+                </div>
 
-            // Cek duplikasi no_agenda
-            $cek = mysqli_query($conn, "SELECT * FROM surat_masuk WHERE nomor = '$nomor'");
-            if (mysqli_num_rows($cek) > 0) {
-                echo "<div class='message error'>Nomor '$nomor' sudah ada. Gunakan nomor yang berbeda.</div>";
-            } else {
-                if (move_uploaded_file($_FILES["file_surat"]["tmp_name"], $targetFile)) {
-                    $sql = "INSERT INTO surat_masuk (
-                        nomor, nama_pengirim, instansi, nomor_surat, tanggal_surat,
-                        perihal, file_surat
-                    ) VALUES (
-                        '$nomor', '$nama_pengirim', '$instansi', '$nomor_surat', '$tanggal_surat',
-                        '$perihal','$fileName'
-                    )";
+                <div class="form-group">
+                    <label for="nama_pengirim">Nama Pengirim</label>
+                    <input type="text" id="nama_pengirim" name="nama_pengirim" placeholder="Contoh: HMJ Administrasi Bisnis" required />
+                </div>
 
-                    if (mysqli_query($conn, $sql)) {
-                        echo "<div class='message'>Data berhasil disimpan ke database dan file berhasil diupload!<br>
-                              File surat tersimpan sebagai: <a href='$targetFile' target='_blank'>$fileName</a></div>";
-                    } else {
-                        echo "<div class='message error'>Gagal menyimpan ke database: " . mysqli_error($conn) . "</div>";
-                    }
-                } else {
-                    echo "<div class='message error'>Gagal mengupload file.</div>";
-                }
-            }
-        }
-        ?>
+                <div class="form-group">
+                    <label for="instansi">Instansi / Lembaga</label>
+                    <input type="text" id="instansi" name="instansi" placeholder="Contoh: Politeknik Negeri Sriwijaya" required />
+                </div>
 
-        <div class="form-container">
-        <form action="" method="post" enctype="multipart/form-data">
-            <label>Nomor:</label>
-            <input type="text" name="nomor" required />
+                <div class="form-group">
+                    <label for="tanggal_surat">Tanggal Surat Masuk</label>
+                    <input type="date" id="tanggal_surat" name="tanggal_surat" required />
+                </div>
 
-            <label>Nomor Surat:</label>
-            <input type="text" name="nomor_surat" required />
+                <div class="form-group">
+                    <label for="file_surat">Upload Berkas Surat (PDF/JPG/PNG)</label>
+                    <input type="file" id="file_surat" name="file_surat" accept=".pdf,.jpg,.jpeg,.png" required />
+                </div>
 
-            <label>Perihal:</label>
-            <input type="text" name="perihal" required />
+                <button type="submit" class="btn-submit">
+                    <span>💾</span> Simpan Data Surat Masuk
+                </button>
+            </form>
+        </div>
 
-            <label>Nama Pengirim:</label>
-            <input type="text" name="nama_pengirim" required />
-
-            <label>Instansi:</label>
-            <input type="text" name="instansi" required />
-
-            <label>Tanggal Surat Masuk:</label>
-            <input type="date" name="tanggal_surat" required />
-
-            <label>Upload File Surat (PDF/JPG/PNG):</label>
-            <input type="file" name="file_surat" accept=".pdf,.jpg,.jpeg,.png" required />
-
-            <button type="submit">Simpan Data</button>
-        </form>
+        <div class="form-actions-bar">
+            <a href="data_suratmasuk.php" class="btn-link">📁 Lihat Data Surat Masuk</a>
+            <a href="beranda.php" class="btn-link">🏠 Kembali ke Dashboard</a>
         </div>
     </div>
-</div>
+</main>
 
 </body>
 </html>
